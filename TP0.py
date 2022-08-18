@@ -3,6 +3,19 @@
 
 import sys
 
+#Constantes
+INICIO = "PROG"
+FIN = "GORP"
+VARIABLES = "VAR"
+METODO = "PROC"
+
+#Diccionario de metodos, donde la llave es el nombre y el valor es la cantidad de parametros que tiene
+metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1, "grab": 1, "get": 1, "free": 1, 
+            "pop": 1, "walk": 2, "canWalk": 2}
+
+#Diccionario de variables y su valor
+variablesExistentes = {}
+
 #Valor que se retorna al final de revisar el archivo. True si es valido, False d.l.c
 valido = True
 
@@ -18,10 +31,4 @@ valido = True
 
 #Cuando inicia un metodo, asegurarse que la siguiente linea sea '{'. D.l.c valido = false.
 #Quizas tener un booleano que inidique si se abrieron los parentesis de un metodo, pero no estoy seguro de como hacer que no se putee si nunca se cierre
-
-
-
-
-
-
 
