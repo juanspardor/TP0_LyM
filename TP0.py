@@ -16,8 +16,6 @@ metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1,
 #Diccionario de variables y su valor
 variablesExistentes = {}
 
-#Valor que se retorna al final de revisar el archivo. True si es valido, False d.l.c
-valido = True
 
 
 #Al leer la primera linea, revisar que sea PROG. D.l.c valido = false
@@ -31,4 +29,29 @@ valido = True
 
 #Cuando inicia un metodo, asegurarse que la siguiente linea sea '{'. D.l.c valido = false.
 #Quizas tener un booleano que inidique si se abrieron los parentesis de un metodo, pero no estoy seguro de como hacer que no se putee si nunca se cierre
+
+#Prueba para practicar lectura de archivos
+
+f = open("EjemploEntrada.txt", "r")
+
+def revisarArchivo(archivo):
+    #Valor que se retorna al final de revisar el archivo. True si es valido, False d.l.c
+    valido = True
+
+    #Lectura del archhivo completo, para revisar que PROG y GORP esten presents
+    inicioFinCorrecto = archivo.read().strip()
+
+    #Verificar que el archivo inicie y termine correctamente. Si no es correcto, termina la revision y retorna falso
+    if inicioFinCorrecto.startswith(INICIO) == False or inicioFinCorrecto.endswith(FIN) == False:
+        valido = False
+        return valido
+
+
+    return valido
+
+
+print(revisarArchivo(f))
+
+
+
 
