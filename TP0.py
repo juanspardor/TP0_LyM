@@ -34,18 +34,31 @@ variablesExistentes = {}
 
 f = open("EjemploEntrada.txt", "r")
 
+#Revisar que continue la lectura a partir del punto que se llego por ultima vez en otra funcion
+def pruebaLecturaAparte(X):
+    print(X.readline().strip())
+
+
+#Funcion que revisa por completo el programa a partir de un archivo de texto. Retorna true si es valido, false d.l.c
 def revisarArchivo(archivo):
+   
     #Valor que se retorna al final de revisar el archivo. True si es valido, False d.l.c
     valido = True
 
     #Lectura del archhivo completo, para revisar que PROG y GORP esten presents
     inicioFinCorrecto = archivo.read().strip()
+    archivo.readlines()
 
     #Verificar que el archivo inicie y termine correctamente. Si no es correcto, termina la revision y retorna falso
     if inicioFinCorrecto.startswith(INICIO) == False or inicioFinCorrecto.endswith(FIN) == False:
         valido = False
         return valido
 
+    #Volver a iniciar la lectura del archivo
+    archivo.seek(0)
+    print(archivo.readline().strip())
+    pruebaLecturaAparte(archivo)
+    print(archivo.readline().strip())
 
     return valido
 
