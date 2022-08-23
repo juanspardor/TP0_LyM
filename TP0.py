@@ -90,8 +90,12 @@ def revisarArchivo(archivo):
 
     #Inicio revision del archivo completo
     for i in range(1, numero-1):
+        #Lectura linea actual
         lineaAct = archivo.readline().strip()
+
+        #Se revisa si la linea actual es de declaracion de variables, y en dado caso se procesa con su funcion respectiva
         if lineaAct.upper().startswith(VARIABLES) == True:
+            #Si no es correcta la declaracion, no es correcto el programa
             if procesarVariables(lineaAct) == False:
                 valido = False
                 return valido
