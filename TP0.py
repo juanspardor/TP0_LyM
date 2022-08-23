@@ -17,11 +17,6 @@ metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1,
 variablesExistentes = {}
 
 
-
-#Al leer la primera linea, revisar que sea PROG. D.l.c valido = false
-#Al leer la ultima linea, revisar que sea GORP. D.l.c valido = false
-
-
 #Tener un diccionario con las variables donde la llave es el nombre y el valor es el valor asignacio. Iniciamos con valor = null
 
 #Tener un diccionario con los metodos, donde la llave es el nombre y el valor es el numero de parametros. 
@@ -38,16 +33,50 @@ f = open("EjemploEntrada.txt", "r")
 def pruebaLecturaAparte(X):
     print(X.readline().strip())
 
+#Funcion para procesar una linea que inica con VAR
+def procesarVariables(linea):
 
+    #Revisar que si sea VAR y no alguna combinacion de minusculas y mayusculas
+    if linea.startswith(VARIABLES) == False:
+        return False
+    #Si la linea no termina con ;, no es valido el programa
+    if linea.endswith(";") == False:
+        return False
+    linea = linea.removesuffix(';')
+
+    #Se tokeniza la linea
+    partes = linea.split()
+
+    #Se agregan las variables al diccionario de variables existentes
+    for i in range(1, len(partes)):
+            #A la variable actual se le elimina la coma
+            actual = partes[i].removesuffix(',')
+            
+            #Se revisa si la variable actual ya fue declarada, y si lo fue, no es valido el programa
+            if actual in variablesExistentes:
+                return False
+            
+            #Se agrega correctamente la variable con un valor inicial de null
+            variablesExistentes[actual] = None
+
+    #En caso de estar bien la linea, se retorna verdadero
+    return True
+
+    
 #Funcion que revisa por completo el programa a partir de un archivo de texto. Retorna true si es valido, false d.l.c
 def revisarArchivo(archivo):
    
     #Valor que se retorna al final de revisar el archivo. True si es valido, False d.l.c
     valido = True
 
+    #Numero de lineas a leer
+    numero = len(archivo.readlines())
+    print(str(numero))
+
     #Lectura del archhivo completo, para revisar que PROG y GORP esten presents
+    archivo.seek(0)
     inicioFinCorrecto = archivo.read().strip()
-    archivo.readlines()
+    
 
     #Verificar que el archivo inicie y termine correctamente. Si no es correcto, termina la revision y retorna falso
     if inicioFinCorrecto.startswith(INICIO) == False or inicioFinCorrecto.endswith(FIN) == False:
@@ -56,7 +85,18 @@ def revisarArchivo(archivo):
 
     #Volver a iniciar la lectura del archivo
     archivo.seek(0)
+    #Lectura primera linea que ya se reviso
     print(archivo.readline().strip())
+
+    #Inicio revision del archivo completo
+    for i in range(1, numero-1):
+        lineaAct = archivo.readline().strip()
+        if lineaAct.upper().startswith(VARIABLES) == True:
+            if procesarVariables(lineaAct) == False:
+                valido = False
+                return valido
+            
+
     pruebaLecturaAparte(archivo)
     print(archivo.readline().strip())
 
