@@ -8,6 +8,7 @@ INICIO = "PROG"
 FIN = "GORP"
 VARIABLES = "VAR"
 METODO = "PROC"
+FIN_METODO = "CORP"
 
 #Diccionario de metodos, donde la llave es el nombre y el valor es la cantidad de parametros que tiene
 metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1, "grab": 1, "get": 1, "free": 1, 
@@ -16,6 +17,11 @@ metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1,
 #Diccionario de variables y su valor
 variablesExistentes = {}
 
+#Variable que guarda la cantidad actual de instancias revisadas de PROC
+cantidadProc = 0
+
+#Variable que guarda la cantidad actual de instancias revisadas de CORP
+cantidadCorp = 0
 
 #Tener un diccionario con las variables donde la llave es el nombre y el valor es el valor asignacio. Iniciamos con valor = null
 
@@ -62,6 +68,9 @@ def procesarVariables(linea):
     #En caso de estar bien la linea, se retorna verdadero
     return True
 
+#Funcion para procesar
+def procesarPROC(archivo, linea):
+    return True
     
 #Funcion que revisa por completo el programa a partir de un archivo de texto. Retorna true si es valido, false d.l.c
 def revisarArchivo(archivo):
@@ -76,13 +85,25 @@ def revisarArchivo(archivo):
     #Lectura del archhivo completo, para revisar que PROG y GORP esten presents
     archivo.seek(0)
     inicioFinCorrecto = archivo.read().strip()
-    
 
     #Verificar que el archivo inicie y termine correctamente. Si no es correcto, termina la revision y retorna falso
     if inicioFinCorrecto.startswith(INICIO) == False or inicioFinCorrecto.endswith(FIN) == False:
         valido = False
         return valido
 
+
+    #Verificar que todo bloque que se abra, se cierre. Ya sea de instrucciones o de PROC
+    if not inicioFinCorrecto.count("{") == inicioFinCorrecto.count("}"):
+        valido = False
+        return valido
+
+    #Verificar que todos los PROC tengan su CORP respectivo. ACA TOCA DEVOLVER EL NOT
+    if inicioFinCorrecto.count(METODO) == inicioFinCorrecto.count(FIN_METODO):
+        valido = False
+        return valido
+    
+
+    
     #Volver a iniciar la lectura del archivo
     archivo.seek(0)
     #Lectura primera linea que ya se reviso
@@ -93,13 +114,32 @@ def revisarArchivo(archivo):
         #Lectura linea actual
         lineaAct = archivo.readline().strip()
 
+        #Si la linea actual es "", no se revisa nada y se pasa a la siguiente iteracion
+        if lineaAct == "":
+            continue
+
         #Se revisa si la linea actual es de declaracion de variables, y en dado caso se procesa con su funcion respectiva
         if lineaAct.upper().startswith(VARIABLES) == True:
             #Si no es correcta la declaracion, no es correcto el programa
             if procesarVariables(lineaAct) == False:
                 valido = False
                 return valido
+        
+        #Para revisar un PROC toca verificar 2 cosas:
+        #1. Que despues del PROC eventualmente este un CORP, no puede iniciar otro PROC.
+        #Es decir, find(CORP desde act) < find(PROC desde act). FALTA HACER ESTO, TOCARIA HACER OTRA FUNCION 
+        #A esa funcion se le mete inicioFinCorrecto, cantidadProc y cantidadCopr para revisar usando algun metodo de Nth substring en google
+        if lineaAct.upper().startswith(METODO):
+            valido = True
             
+
+        #2. En esta parte del codigo no deberia aparecer un CORP, ese se lee en la funcion de procesar PROC. Si aparece, esta mal el programa
+        if lineaAct.upper().startswith(FIN_METODO):
+            valido = False
+            return False
+
+
+      
 
     pruebaLecturaAparte(archivo)
     print(archivo.readline().strip())

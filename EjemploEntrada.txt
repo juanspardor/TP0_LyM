@@ -1,11 +1,12 @@
 PROG
-var n, x, y;
+VAR n, x, y;
 PROC putCB(c, b)
 {
     drop(c);
     free(b);
     walk(n)
 }
+CORP
 PROC goNorth ()
 {
 
