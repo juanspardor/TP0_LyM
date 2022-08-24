@@ -17,13 +17,20 @@ metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1,
 #Diccionario de variables y su valor
 variablesExistentes = {}
 
+#Variable que guarda la cantidad total de instancias de PROC
+totalProc = 0 
+
+#Variable que guarda la cantidad total de instancias de CORP
+totalCorp = 0 
+
 #Variable que guarda la cantidad actual de instancias revisadas de PROC
 cantidadProc = 0
 
 #Variable que guarda la cantidad actual de instancias revisadas de CORP
 cantidadCorp = 0
 
-#Tener un diccionario con las variables donde la llave es el nombre y el valor es el valor asignacio. Iniciamos con valor = null
+#Variable que guarda la lectura completa del archivo
+inicioFinCorrecto = ""
 
 #Tener un diccionario con los metodos, donde la llave es el nombre y el valor es el numero de parametros. 
 #Cuando se haga el llamado a un metodo se revisa que exista la llave y que el numero de parametros agregados sea igual el valor que esta en el dict
@@ -71,6 +78,34 @@ def procesarVariables(linea):
 #Funcion para procesar
 def procesarPROC(archivo, linea):
     return True
+
+#Metodo que hace la revision de las posicion de los siguientes PROC y CORP. En el dado caso que PROC este antes que CORP retorna falso
+def revisionProcCorp():
+    rta = True
+
+    #Numero de instancia de CORP que se busca
+    siguienteCorp = cantidadProc
+    #Posicion en la que se empezara a iterar la busqueda de CORP
+    locacionCorp = -1
+
+    #Numero de instancia de PROC que se busca
+    siguienteProc = cantidadProc + 1
+    #Posicion en la que se empezara a iterar la busqueda de CORP
+    locacionProc = -1
+
+    #Busqueda CORP
+    for i in range(0, siguienteCorp):
+        locacionCorp = inicioFinCorrecto.find(FIN_METODO, locacionCorp+1)
+
+    #Busqueda PROC
+    for i in range(0, siguienteProc):
+        locacionProc = inicioFinCorrecto.find(METODO, locacionProc +1)
+
+    #Si hay un PROC antes del siguiente CORP, se retorna falso
+    if locacionProc < locacionCorp:
+        return False
+
+    return rta
     
 #Funcion que revisa por completo el programa a partir de un archivo de texto. Retorna true si es valido, false d.l.c
 def revisarArchivo(archivo):
@@ -82,7 +117,7 @@ def revisarArchivo(archivo):
     numero = len(archivo.readlines())
     print(str(numero))
 
-    #Lectura del archhivo completo, para revisar que PROG y GORP esten presents
+    #Lectura del archhivo completo
     archivo.seek(0)
     inicioFinCorrecto = archivo.read().strip()
 
@@ -98,7 +133,9 @@ def revisarArchivo(archivo):
         return valido
 
     #Verificar que todos los PROC tengan su CORP respectivo. ACA TOCA DEVOLVER EL NOT
-    if inicioFinCorrecto.count(METODO) == inicioFinCorrecto.count(FIN_METODO):
+    totalCorp = inicioFinCorrecto.count(FIN_METODO)
+    totalProc = inicioFinCorrecto.count(METODO)
+    if not totalCorp == totalProc:
         valido = False
         return valido
     
@@ -130,7 +167,13 @@ def revisarArchivo(archivo):
         #Es decir, find(CORP desde act) < find(PROC desde act). FALTA HACER ESTO, TOCARIA HACER OTRA FUNCION 
         #A esa funcion se le mete inicioFinCorrecto, cantidadProc y cantidadCopr para revisar usando algun metodo de Nth substring en google
         if lineaAct.upper().startswith(METODO):
-            valido = True
+            #Aumenta la cantidad de PROC's revisados
+            cantidadProc += 1
+
+            #Si es el ulitmo PROC y el penultimo CORP, no hay necesidad de revisar que esten bien organizados
+            if cantidadProc == totalProc and cantidadCorp == totalCorp -1:
+                valido = True
+
             
 
         #2. En esta parte del codigo no deberia aparecer un CORP, ese se lee en la funcion de procesar PROC. Si aparece, esta mal el programa
