@@ -14,6 +14,9 @@ FIN_METODO = "CORP"
 metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1, "grab": 1, "get": 1, "free": 1, 
             "pop": 1, "walk": 2, "canWalk": 2}
 
+#Lista que guarda las direcciones y sentidos validos para algunos metodos
+direcciones = ["north", "south", "east", "west", "right", "left", "front", "back"]
+
 #Diccionario de variables y su valor
 variablesExistentes = {}
 
@@ -76,8 +79,36 @@ def procesarVariables(linea):
     return True
 
 #Funcion para procesar
-def procesarPROC(archivo, linea):
-    return True
+def procesarPROC(programa, linea):
+    rta = True
+    #Si la declaracion no inicia con PROC, el programa es invalido
+    if linea.startswith(METODO) == False:
+        return False
+
+    #Se obtiene la declaracion del metodo, es decir, nombre y parametros
+    metodoCompleto = linea.split(METODO)[1].strip()
+
+    #Revisar que los parametros esten entre parentesis
+    if metodoCompleto.find("(") == -1 or metodoCompleto.find(")") == -1:
+        return False
+    
+    #Se separan las partes de la declaracion de metodo: nombre y parametros
+    partes = metodoCompleto.split("(")
+
+    #Se obtiene el nombre del metodo a declarar
+    nombreMetodo = partes[0]
+
+    #Si se esta declarando un metodo ya existente, el programa es invalido
+    if nombreMetodo in metodos:
+        return False
+    
+    #Se calcula la cantidad de parametros que utiliza la funcion
+    numParametros = partes[1].count(",") + 1 
+
+    #Se agrega el metodo al diccionario de metodos, junto a su cantidad de parametros respectiva
+    metodos[nombreMetodo] = numParametros
+    
+    return rta
 
 #Metodo que hace la revision de las posicion de los siguientes PROC y CORP. En el dado caso que PROC este antes que CORP retorna falso
 def revisionProcCorp():
@@ -119,6 +150,7 @@ def revisarArchivo(archivo):
 
     #Lectura del archhivo completo
     archivo.seek(0)
+    global inicioFinCorrecto
     inicioFinCorrecto = archivo.read().strip()
 
     #Verificar que el archivo inicie y termine correctamente. Si no es correcto, termina la revision y retorna falso
@@ -135,7 +167,7 @@ def revisarArchivo(archivo):
     #Verificar que todos los PROC tengan su CORP respectivo. ACA TOCA DEVOLVER EL NOT
     totalCorp = inicioFinCorrecto.count(FIN_METODO)
     totalProc = inicioFinCorrecto.count(METODO)
-    if not totalCorp == totalProc:
+    if  not totalCorp == totalProc:
         valido = False
         return valido
     
@@ -168,23 +200,23 @@ def revisarArchivo(archivo):
         #A esa funcion se le mete inicioFinCorrecto, cantidadProc y cantidadCopr para revisar usando algun metodo de Nth substring en google
         if lineaAct.upper().startswith(METODO):
             #Aumenta la cantidad de PROC's revisados
-            cantidadProc += 1
+            global cantidadProc
+            cantidadProc = cantidadProc + 1
 
             #Si es el ulitmo PROC y el penultimo CORP, no hay necesidad de revisar que esten bien organizados
-            if cantidadProc == totalProc and cantidadCorp == totalCorp -1:
-                valido = True
+            if not cantidadProc == totalProc and cantidadCorp == totalCorp -1:
 
-            
+                #Se revisa si el siguiente CORP esta antes del siguiente PROC. Si esta antes, el programa es invalido
+                if not revisionProcCorp():
+                    valido = False
+                    return valido
 
-        #2. En esta parte del codigo no deberia aparecer un CORP, ese se lee en la funcion de procesar PROC. Si aparece, esta mal el programa
-        if lineaAct.upper().startswith(FIN_METODO):
-            valido = False
-            return False
+            #En este momento ya se puede hacer el procesamiento del PROC correctamente
+            if procesarPROC(archivo, lineaAct) == False:
+                valido = False
+                return valido
 
 
-      
-
-    pruebaLecturaAparte(archivo)
     print(archivo.readline().strip())
 
     return valido

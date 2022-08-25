@@ -13,12 +13,14 @@ PROC goNorth ()
     while (canWalk(north, 1)) do { walk(north, 1) } od
 
 }
+CORP
 PROC goWest()
 {
 
     if (canWalk(west,1)) { walk(west,1)} fi
 
 }
+CORP
 
 
 {
