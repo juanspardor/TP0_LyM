@@ -1,13 +1,20 @@
 #Juan Sebastian Pardo - 201923794 - j.pardor
 
-import sys
-
 #Constantes
+from operator import truediv
+
+
+#Palabras reservadas del programa
 INICIO = "PROG"
 FIN = "GORP"
 VARIABLES = "VAR"
 METODO = "PROC"
 FIN_METODO = "CORP"
+CICLO_ABIERTO = "while"
+HACER = "do"
+DEJAR_HACER = "od"
+CICLO_CERRADO = "REPEAT"
+NEGACION = "not"
 
 #Diccionario de metodos, donde la llave es el nombre y el valor es la cantidad de parametros que tiene
 metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1, "grab": 1, "get": 1, "free": 1, 
@@ -34,7 +41,6 @@ cantidadCorp = 0
 #Variable que guarda la lectura completa del archivo
 inicioFinCorrecto = ""
 
-#Tener un diccionario con los metodos, donde la llave es el nombre y el valor es el numero de parametros. 
 #Cuando se haga el llamado a un metodo se revisa que exista la llave y que el numero de parametros agregados sea igual el valor que esta en el dict
 
 #Cuando inicia un metodo, asegurarse que la siguiente linea sea '{'. D.l.c valido = false.
@@ -44,9 +50,6 @@ inicioFinCorrecto = ""
 
 f = open("EjemploEntrada.txt", "r")
 
-#Revisar que continue la lectura a partir del punto que se llego por ultima vez en otra funcion
-def pruebaLecturaAparte(X):
-    print(X.readline().strip())
 
 #Funcion para procesar una linea que inica con VAR
 def procesarVariables(linea):
@@ -77,7 +80,47 @@ def procesarVariables(linea):
     #En caso de estar bien la linea, se retorna verdadero
     return True
 
-#Funcion para procesar
+#Funcion para declarar un bloque de instrucciones de un metodo
+def declararInstruccionesMetodo(archivo, parametros):
+    rta = True
+
+    #Linea actual que se lee
+    lineaAct = archivo.readline().strip()
+
+    while (lineaAct == "}") == False:
+
+        #Si la linea actual es "", se continua iterando
+        if lineaAct == "":
+            lineaAct = archivo.readline().strip()
+            continue
+
+        #Revision si es un WHILE
+        if lineaAct.upper().startswith(CICLO_ABIERTO):
+            lineaAct = archivo.readline().strip()
+            continue
+
+        #Revision si es un REPEAT
+        if lineaAct.upper().startswith(CICLO_CERRADO):
+            lineaAct = archivo.readline().strip()
+            continue
+
+        #Revision que sea una asignacion
+        if lineaAct.find(":=") > - 1:
+
+            #Si la instruccion no termina con ; el programa es invalido
+            if not lineaAct.endswith(";"):
+                return False
+
+            #Si incluye ;, eliminarlo
+            lineaAct.removesuffixx(";")
+            
+            #Hacer la particion de la linea: variable a asignar, valor a asignar
+            variable = lineaAct.split(":=")[0]
+            valor = lineaAct.split(":=")[1]
+
+    return rta
+
+#Funcion para procesar la declaracion de un PROC
 def procesarPROC(programa, linea):
     rta = True
     #Si la declaracion no inicia con PROC, el programa es invalido
@@ -101,12 +144,34 @@ def procesarPROC(programa, linea):
     if nombreMetodo in metodos:
         return False
     
-    #Se calcula la cantidad de parametros que utiliza la funcion
-    numParametros = partes[1].count(",") + 1 
+    #Se obtienen los parametros sin limpiar, es decir, con ',' y ' )'
+    parametrosSinLimpiar = partes[1].split(",")
+
+    #Lista de los parametros limpios
+    parametros = []
+
+    #Proceso de limipar los parametros y ponerlos en la su lista correspondiente
+    for x in parametrosSinLimpiar:
+        parametros.append(x.removesuffix(')').strip())
 
     #Se agrega el metodo al diccionario de metodos, junto a su cantidad de parametros respectiva
-    metodos[nombreMetodo] = numParametros
+    metodos[nombreMetodo] = len(parametros)
+
+    #Variable para guardar la linea actual
+    lineaAct = ""
     
+    #Se busca el inicio del bloque de instrucciones "{"
+    while (lineaAct == "{") == False:
+        
+        #Si antes del inicio del bloque de instrucciones hay algo disntito a "", el programa es invalido
+        if not lineaAct == "":
+            return False
+
+        #Se actualiza la linea actual
+        lineaAct = programa.readline().strip()
+
+    #Una vez se entra al bloque, se inicia procesan las instrucciones
+    declararInstruccionesMetodo(programa, parametros)
     return rta
 
 #Metodo que hace la revision de las posicion de los siguientes PROC y CORP. En el dado caso que PROC este antes que CORP retorna falso
