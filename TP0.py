@@ -88,7 +88,8 @@ def declararInstruccionesMetodo(archivo, parametros):
     lineaAct = archivo.readline().strip()
 
     while (lineaAct == "}") == False:
-
+        print(lineaAct)
+        print("Estoy aca")
         #Si la linea actual es "", se continua iterando
         if lineaAct == "":
             lineaAct = archivo.readline().strip()
@@ -118,6 +119,7 @@ def declararInstruccionesMetodo(archivo, parametros):
             variable = lineaAct.split(":=")[0]
             valor = lineaAct.split(":=")[1]
 
+        lineaAct = archivo.readline().strip()
     return rta
 
 #Funcion para procesar la declaracion de un PROC
