@@ -21,16 +21,17 @@ INICIO_CONDICIONAL = "if"
 FIN_CONDICIONAL = "fi"
 
 #Diccionario de metodos, donde la llave es el nombre y el valor es la cantidad de parametros que tiene
-metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, "drop": 1, "grab": 1, "get": 1, "free": 1, 
-            "pop": 1, "walk": 2, "canWalk": 2}
+metodos = { "walk1": 1, "jump": 1, "jumpTo": 2, "veer": 1, "look": 1, "drop": 1, "grab": 1, "get": 1, "free": 1, 
+            "pop": 1, "walk2": 2, "canWalk": 2, "canWalk": 2, "isFacing": 1, "isValid": 2, "canWalk": 2}
 
 #Lista de metodos que tienen como parametro una diraccion o sentido
-metodosDireccionales = ["veer", "look", "walk"]
+metodosDireccionales = ["veer", "look", "walk2"]
 
 #Lista que guarda las direcciones y sentidos validos para algunos metodos
 parametrosVeer = ["left", "right", "around"]
 parametrosLook = ["north", "south", "east", "west"]
-parametrosWalk = ["left", "right"]
+parametrosWalk = ["left", "right", "front", "back", "north", "south", "east", "west"]
+parametrosIsValid = ["walk", "jump", "grab", "pop", "pick", "free", "drop"]
 
 #Diccionario de variables y su valor
 variablesExistentes = {}
@@ -94,13 +95,13 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
     
     #Primero se revisa si el metodo hace parte de los direccionales, ya que estos tienen mas restricciones en los parametros
     if nombreMetodo in metodosDireccionales:
-        rta = True
         
         #Se verifica si es veer
         if nombreMetodo == "veer":
             #Si el parametro no hace parte del conjunto de valores esperados, el programa es invalido
             if not parametrosLlamado[0] in parametrosVeer:
                 return False
+
 
         #Se verifica si es look
         if nombreMetodo == "look":
@@ -109,10 +110,69 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
                 return False
         
         #Se verifica si es walk
-        if nombreMetodo == "walk":
+        if nombreMetodo == "walk2":
             #Si el primer parametro no hace parte del conjunto de valores esperados, el programa es invalido
             if not parametrosLlamado[0] in parametrosWalk:
                 return False
+
+            #Para el segundo parametro toca revisar que sea un digito, o que sea un variable existente o un parametro que llega de la definicion de un PROC
+            esDigito = parametrosLlamado[1].isdigit()
+            esVariableYaDefinida = parametrosLlamado[1] in variablesExistentes
+            esParametroDeEntrada = parametrosLlamado[1] in parametrosProc
+
+            #Si todos estos son falsos, el programa es invalido 
+            if not(esDigito or esVariableYaDefinida or esParametroDeEntrada):
+                return False
+
+        #Se verifica si es isValid
+        if nombreMetodo == "isValid":
+            #Si el parametro no hace parte de los valores esperados, el programa es invalido
+            if not parametrosLlamado[0] in parametrosIsValid:
+                return False
+        
+        #Se verifica si es isFacing
+        if nombreMetodo == "isFacing":
+            #Si el parametro no hace parte de los valores esperados, el programa es invalido
+            if not parametrosLlamado[0] in parametrosLook:
+                return False
+
+        #Se verifica si es canWalk
+        if nombreMetodo == "canWalk":
+            #Si el primer parametro no hace parte del conjunto de valores esperados, el programa es invalido
+            if not parametrosLlamado[0] in parametrosWalk:
+                return False
+
+            #Para el segundo parametro toca revisar que sea un digito, o que sea un variable existente o un parametro que llega de la definicion de un PROC
+            esDigito = parametrosLlamado[1].isdigit()
+            esVariableYaDefinida = parametrosLlamado[1] in variablesExistentes
+            esParametroDeEntrada = parametrosLlamado[1] in parametrosProc
+
+            #Si todos estos son falsos, el programa es invalido 
+            if not(esDigito or esVariableYaDefinida or esParametroDeEntrada):
+                return False
+
+    #Si no es uno de los metodos direccionales, es otro de los metodos predefinidos, que aceptan direcciones o sentidos 
+    
+    #Primero se revisa jumpTo, ya que tiene 2 parametros
+    if nombreMetodo == "jumpTo":
+        #Para cada uno de sus parametros, tiene que ser un digito, una variable existente, o un parametro que llega desde PROC
+        for paramAct in parametrosLlamado:
+            esDigito = paramAct.isdigit()
+            esVariableYaDefinida = paramAct in variablesExistentes
+            esParametroDeEntrada = paramAct in parametrosProc
+            #Si todos estos son falsos, el programa es invalido 
+            if not(esDigito or esVariableYaDefinida or esParametroDeEntrada):
+                return False
+
+    #El resto de metodos no-direccionales, solo tienen 1 parametro para revisar
+    #Para dicho parametro toca revisar que sea un digito, o que sea un variable existente o un parametro que llega de la definicion de un PROC
+    esDigito = parametrosLlamado[0].isdigit()
+    esVariableYaDefinida = parametrosLlamado[0] in variablesExistentes
+    esParametroDeEntrada = parametrosLlamado[0] in parametrosProc
+
+    #Si todos estos son falsos, el programa es invalido 
+    if not(esDigito or esVariableYaDefinida or esParametroDeEntrada):
+            return False
 
     return rta 
 
@@ -203,6 +263,13 @@ def procesarBloqueInstrucciones(archivo, parametros):
             #Ciclo para agregar los parametros individuales a su lista respectiva
             for x in parametrosFragmentados:
                 parametrosLinea.append(x.strip())
+
+            #Dado que el metodo dos tiene un parametro opcional, toca ajustar el "nombre" para procesarlo correctamente
+            if nombreMetodo == "walk" and len(parametrosLinea) == 1:
+                nombreMetodo = "walk1"
+            
+            if nombreMetodo == "walk" and len(parametrosLinea) == 2:
+                nombreMetodo = "walk2"
 
             #Si el nombre del metodo no esta en los metodos existentes, el programa es invalido
             if not nombreMetodo in metodos:

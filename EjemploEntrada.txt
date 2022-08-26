@@ -4,8 +4,9 @@ PROC putCB(c, b)
 {
     n:=4;
     drop(c);
-    free(b);
-    walk(right, n);
+    jumpTo(1,y);
+    free(c);
+    
 }
 
 
@@ -29,7 +30,7 @@ CORP
 {
 go(3,3);
 n=6;
-putCB(2,1)
+putCB(x,1)
 
 
 
