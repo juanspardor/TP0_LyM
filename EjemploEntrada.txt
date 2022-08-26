@@ -2,10 +2,13 @@ PROG
 VAR n, x, y;
 PROC putCB(c, b)
 {
+    n:=4;
     drop(c);
     free(b);
-    walk(n)
+    walk(n);
 }
+
+
 CORP
 PROC goNorth ()
 {

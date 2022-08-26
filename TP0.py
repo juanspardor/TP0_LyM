@@ -1,8 +1,10 @@
 #Juan Sebastian Pardo - 201923794 - j.pardor
 
-#Constantes
-from operator import truediv
-
+#ARCHIVO PARA EJECUTAR EL PROYECTO.
+#PARA EJECUTAR:
+# - Si el archivo esta en el mismo directorio que este .py, solo poner el nombre como primer parametro
+# - Si el archivo esta en otro directorio, poner la direccion como primer parametro
+programaARevisar = open("EjemploEntrada.txt", "r")
 
 #Palabras reservadas del programa
 INICIO = "PROG"
@@ -15,10 +17,15 @@ HACER = "do"
 DEJAR_HACER = "od"
 CICLO_CERRADO = "REPEAT"
 NEGACION = "not"
+INICIO_CONDICIONAL = "if"
+FIN_CONDICIONAL = "fi"
 
 #Diccionario de metodos, donde la llave es el nombre y el valor es la cantidad de parametros que tiene
-metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, " drop": 1, "grab": 1, "get": 1, "free": 1, 
+metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, "drop": 1, "grab": 1, "get": 1, "free": 1, 
             "pop": 1, "walk": 2, "canWalk": 2}
+
+#Lista de metodos que tienen como parametro una diraccion o sentido
+metodosDireccionales = ["veer"]
 
 #Lista que guarda las direcciones y sentidos validos para algunos metodos
 direcciones = ["north", "south", "east", "west", "right", "left", "front", "back"]
@@ -45,10 +52,6 @@ inicioFinCorrecto = ""
 
 #Cuando inicia un metodo, asegurarse que la siguiente linea sea '{'. D.l.c valido = false.
 #Quizas tener un booleano que inidique si se abrieron los parentesis de un metodo, pero no estoy seguro de como hacer que no se putee si nunca se cierre
-
-#Prueba para practicar lectura de archivos
-
-f = open("EjemploEntrada.txt", "r")
 
 
 #Funcion para procesar una linea que inica con VAR
@@ -80,6 +83,15 @@ def procesarVariables(linea):
     #En caso de estar bien la linea, se retorna verdadero
     return True
 
+#Funcion para procesar el llamado a un metodo EXISTENTE. Tiene 3 parametros, en orden:
+# 1. nombreMetodo: nombre del metodo a validar
+# 2. parametrosLlamado: lista con los parametros que estaban en el llamado directo (en el readline)
+# 3. parametrosProc: en el caso que venga de un bloque de instrucciones despues de un PROC, es una lista con los parametros del PROC. Si no lo es, es vacia
+def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
+    rta = True
+
+    return rta 
+
 #Funcion para declarar un bloque de instrucciones de un metodo
 def declararInstruccionesMetodo(archivo, parametros):
     rta = True
@@ -96,15 +108,19 @@ def declararInstruccionesMetodo(archivo, parametros):
             continue
 
         #Revision si es un WHILE
-        if lineaAct.upper().startswith(CICLO_ABIERTO):
+        if lineaAct.startswith(CICLO_ABIERTO):
             lineaAct = archivo.readline().strip()
             continue
 
         #Revision si es un REPEAT
-        if lineaAct.upper().startswith(CICLO_CERRADO):
+        if lineaAct.startswith(CICLO_CERRADO):
             lineaAct = archivo.readline().strip()
             continue
-
+        
+        #Revision si es un condicional
+        if lineaAct.startswith(INICIO_CONDICIONAL) and lineaAct.endswith(FIN_CONDICIONAL):
+            lineaAct = archivo.readline().strip()
+            continue
         #Revision que sea una asignacion
         if lineaAct.find(":=") > - 1:
 
@@ -113,13 +129,65 @@ def declararInstruccionesMetodo(archivo, parametros):
                 return False
 
             #Si incluye ;, eliminarlo
-            lineaAct.removesuffixx(";")
+            lineaAct = lineaAct.removesuffix(";")
             
             #Hacer la particion de la linea: variable a asignar, valor a asignar
-            variable = lineaAct.split(":=")[0]
-            valor = lineaAct.split(":=")[1]
+            variable = lineaAct.split(":=")[0].strip()
+            valor = lineaAct.split(":=")[1].strip()
 
-        lineaAct = archivo.readline().strip()
+            #Revision que el valor sea un digito
+            if not valor.isdigit():
+                return False
+
+            #Si la asignacion es a una de las variables que entra por parametro no pasa nada
+            if variable in parametros:
+                lineaAct = archivo.readline().strip()
+                continue
+            
+            #Si la variable no es una variables globales, el programa es invalido
+            if not variable in variablesExistentes:
+                return False
+
+            #Ya al descartar todas las opciones de asignacion, si se llega hasta este punto, la asignacion es a una variable global
+            variablesExistentes[variable] = valor
+
+            lineaAct = archivo.readline().strip()
+            continue
+
+        #Revision si es uno de los metodos existentes
+        #Si la instruccion no termina con ; el programa es invalido
+        if not lineaAct.endswith(";"):
+            return False
+        
+        #Si tiene dos parentesis, es un llamado a un metodo, por lo que se valida
+        if (lineaAct.count("(")== 1 and lineaAct.count(")") == 1):
+
+            #Eliminar ; al final de la instruccion
+            lineaAct = lineaAct.removesuffix(");")
+
+            #Separacion del nombre del metodo y sus parametros
+            nombreMetodo = lineaAct.split("(")[0].strip()
+
+            #Parametros en el llamado al metodo
+            parametrosFragmentados = lineaAct.split("(")[1].strip()
+            parametrosLinea = []
+            for x in parametrosFragmentados:
+                parametrosLinea.append(x.strip())
+
+            #Si el nombre del metodo no esta en los metodos existentes, el programa es invalido
+            if not nombreMetodo in metodos:
+                return False
+            
+            #En este punto, se sabe que el metodo pertenece a los metodos existentes, asi que toca revisar que el numero/tipo de parametros es correcto
+            #Si la instruccion no es valida, el programa es invalido
+            if not validarInstruccion(nombreMetodo, parametrosLinea, parametros):
+                return False
+            
+            #Si la instruccion es valida, se continua iterando
+            lineaAct = archivo.readline().strip()
+            continue   
+        #Si se llego hasta este punto, la linea dentro del bloque de instrucciones no pertenece a la sintaxis del programa, y este es invalido
+        return False
     return rta
 
 #Funcion para procesar la declaracion de un PROC
@@ -172,8 +240,23 @@ def procesarPROC(programa, linea):
         #Se actualiza la linea actual
         lineaAct = programa.readline().strip()
 
-    #Una vez se entra al bloque, se inicia procesan las instrucciones
-    declararInstruccionesMetodo(programa, parametros)
+    #Una vez se entra al bloque, se inicia procesan las instrucciones. Si estas son invalidas, el programa es invalido
+    if not declararInstruccionesMetodo(programa, parametros):
+        return False
+    
+    #Actualizar la linea actual
+    lineaAct = programa.readline().strip()
+
+    #Al ser el bloque de instrucciones valido, se busca CORP para terminar de revisar el metodo. Si alguna linea en el medio es distitna a "", el programa es invalido
+    while (lineaAct == FIN_METODO) == False:
+        if not lineaAct == "":
+            return False
+        lineaAct = programa.readline().strip()
+    
+    #Como se llego a CORP, se actualiza la cantidad de instancias revisadas
+    global cantidadCorp
+    cantidadCorp = cantidadCorp + 1
+
     return rta
 
 #Metodo que hace la revision de las posicion de los siguientes PROC y CORP. En el dado caso que PROC este antes que CORP retorna falso
@@ -288,7 +371,7 @@ def revisarArchivo(archivo):
     return valido
 
 
-print(revisarArchivo(f))
+print(revisarArchivo(programaARevisar))
 
 
 
