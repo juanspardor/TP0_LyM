@@ -25,10 +25,12 @@ metodos = { "walk": 1, "jump": 1, "jumpTo": 2, "veer": 2, "look": 1, "drop": 1, 
             "pop": 1, "walk": 2, "canWalk": 2}
 
 #Lista de metodos que tienen como parametro una diraccion o sentido
-metodosDireccionales = ["veer"]
+metodosDireccionales = ["veer", "look", "walk"]
 
 #Lista que guarda las direcciones y sentidos validos para algunos metodos
-direcciones = ["north", "south", "east", "west", "right", "left", "front", "back"]
+parametrosVeer = ["left", "right", "around"]
+parametrosLook = ["north", "south", "east", "west"]
+parametrosWalk = ["left", "right"]
 
 #Diccionario de variables y su valor
 variablesExistentes = {}
@@ -89,11 +91,33 @@ def procesarVariables(linea):
 # 3. parametrosProc: en el caso que venga de un bloque de instrucciones despues de un PROC, es una lista con los parametros del PROC. Si no lo es, es vacia
 def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
     rta = True
+    
+    #Primero se revisa si el metodo hace parte de los direccionales, ya que estos tienen mas restricciones en los parametros
+    if nombreMetodo in metodosDireccionales:
+        rta = True
+        
+        #Se verifica si es veer
+        if nombreMetodo == "veer":
+            #Si el parametro no hace parte del conjunto de valores esperados, el programa es invalido
+            if not parametrosLlamado[0] in parametrosVeer:
+                return False
+
+        #Se verifica si es look
+        if nombreMetodo == "look":
+            #Si el parametro no hace parte del conjunto de valores esperados, el programa es invalido
+            if not parametrosLlamado[0] in parametrosLook:
+                return False
+        
+        #Se verifica si es walk
+        if nombreMetodo == "walk":
+            #Si el primer parametro no hace parte del conjunto de valores esperados, el programa es invalido
+            if not parametrosLlamado[0] in parametrosWalk:
+                return False
 
     return rta 
 
 #Funcion para declarar un bloque de instrucciones de un metodo
-def declararInstruccionesMetodo(archivo, parametros):
+def procesarBloqueInstrucciones(archivo, parametros):
     rta = True
 
     #Linea actual que se lee
@@ -183,6 +207,10 @@ def declararInstruccionesMetodo(archivo, parametros):
             #Si el nombre del metodo no esta en los metodos existentes, el programa es invalido
             if not nombreMetodo in metodos:
                 return False
+
+            #Si el numero de parametros no es igual al numero esperado, el programa es invalido
+            if not metodos[nombreMetodo] == len(parametrosLinea):
+                return False
             
             #En este punto, se sabe que el metodo pertenece a los metodos existentes, asi que toca revisar que el numero/tipo de parametros es correcto
             #Si la instruccion no es valida, el programa es invalido
@@ -247,7 +275,7 @@ def procesarPROC(programa, linea):
         lineaAct = programa.readline().strip()
 
     #Una vez se entra al bloque, se inicia procesan las instrucciones. Si estas son invalidas, el programa es invalido
-    if not declararInstruccionesMetodo(programa, parametros):
+    if not procesarBloqueInstrucciones(programa, parametros):
         return False
     
     #Actualizar la linea actual
@@ -373,6 +401,15 @@ def revisarArchivo(archivo):
             if procesarPROC(archivo, lineaAct) == False:
                 valido = False
                 return valido
+        
+
+        #Si la linea actual es un parentesis que abre un bloque de instrucciones, se hace su revision respectiva
+        if lineaAct == "{":
+
+            #Se hace el procesamiento de un bloque de instrucciones, y como no es apartir de un PROC, no hay listas de parametros
+            #Si el bloque de instrucciones no es valido, el programa no es valido
+            if not procesarBloqueInstrucciones(archivo, []):
+                return False
 
 
     print(archivo.readline().strip())
