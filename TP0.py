@@ -99,6 +99,7 @@ def declararInstruccionesMetodo(archivo, parametros):
     #Linea actual que se lee
     lineaAct = archivo.readline().strip()
 
+    #Se revisa cada una de las lineas dentro del bloque de instrucciones
     while (lineaAct == "}") == False:
         print(lineaAct)
         print("Estoy aca")
@@ -151,6 +152,7 @@ def declararInstruccionesMetodo(archivo, parametros):
             #Ya al descartar todas las opciones de asignacion, si se llega hasta este punto, la asignacion es a una variable global
             variablesExistentes[variable] = valor
 
+            #Se actualiza la linea actual y se itera
             lineaAct = archivo.readline().strip()
             continue
 
@@ -168,9 +170,13 @@ def declararInstruccionesMetodo(archivo, parametros):
             #Separacion del nombre del metodo y sus parametros
             nombreMetodo = lineaAct.split("(")[0].strip()
 
-            #Parametros en el llamado al metodo
-            parametrosFragmentados = lineaAct.split("(")[1].strip()
+            #Parametros en el llamado al metodo. Se inicia con la particion entre parametros con comas
+            parametrosFragmentados = lineaAct.split("(")[1].strip().split(",")
+
+            #Lista que tendra los parametros individuales
             parametrosLinea = []
+            
+            #Ciclo para agregar los parametros individuales a su lista respectiva
             for x in parametrosFragmentados:
                 parametrosLinea.append(x.strip())
 
@@ -247,10 +253,13 @@ def procesarPROC(programa, linea):
     #Actualizar la linea actual
     lineaAct = programa.readline().strip()
 
-    #Al ser el bloque de instrucciones valido, se busca CORP para terminar de revisar el metodo. Si alguna linea en el medio es distitna a "", el programa es invalido
+    #Al ser el bloque de instrucciones valido, se busca CORP para terminar de revisar el metodo. 
     while (lineaAct == FIN_METODO) == False:
+        #Si alguna linea en el medio es distitna a "", el programa es invalido
         if not lineaAct == "":
             return False
+        
+        #Se actualiza la linea actual
         lineaAct = programa.readline().strip()
     
     #Como se llego a CORP, se actualiza la cantidad de instancias revisadas
@@ -370,7 +379,7 @@ def revisarArchivo(archivo):
 
     return valido
 
-
+#Realizacion del proyecto para parsear el programa que se quiere validar
 print(revisarArchivo(programaARevisar))
 
 

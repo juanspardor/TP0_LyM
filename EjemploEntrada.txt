@@ -3,7 +3,7 @@ VAR n, x, y;
 PROC putCB(c, b)
 {
     n:=4;
-    drop(c);
+    drop(c, x);
     free(b);
     walk(n);
 }
