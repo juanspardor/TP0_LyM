@@ -2,18 +2,21 @@ PROG
 VAR n, x, y;
 PROC putCB(c, b)
 {
+    n:=4;
+    putCB(c,b);
+    walk(right, n);
 }
 CORP
 PROC goNorth ()
 {
 
-    while (canWalk(north, 1)) do { walk(north, 1);walk(right, 1); } od
+    while (canWalk(north, 1)) do { walk(north, 1);walk(south, 2); } od
 
 }
 CORP
 PROC goWest()
 {
-
+    repeatTimes 2 {canWalk(left, 1);canWalk(left, 1);} per
     if (canWalk(west,1)) { walk(west,1)} fi
 
 }
@@ -30,3 +33,5 @@ putCB(x,1)
 }
 
 GORP
+
+

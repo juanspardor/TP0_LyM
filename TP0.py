@@ -188,7 +188,70 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
 
     return rta 
 
-#Funcion para procesar una instruccion while o if - else. El parametro parametrosProc esta en el caso que se llame a la funcion desde un bloque de instruccion de un PROC
+#Fucion para procesar el fin de la estructura repeatTimes
+def validarFinEstructuraControl(linea, parametrosProc):
+    rta = True
+
+    #Si la linea no es un bloque de instrucciones, el programa es invalido
+    if not linea.startswith("{") and linea.endswith("}"):
+        return False
+
+    #Eliminacion de brackets
+    linea = linea.removeprefix("{").strip()
+    linea = linea.removesuffix("}").strip()
+
+    #Si la ultima instruccion del bloque no termina en ;, el programa es invalido
+    if not linea.endswith(";"):
+        return False
+    
+    #Se hace la separacion de instrucciones en el caso que haya mas de una
+    instrucciones = linea.split(";")
+    instrucciones.pop()
+    #Revision individual de cada instruccion
+    for instruccionActual in instrucciones:
+        
+        instruccionActual = instruccionActual.strip()
+        #Si la instruccion no tiene ( y termina en ), el programa es invalido
+        if not instruccionActual.find("(") > -1 and instruccionActual.endswith(")"):
+            return False
+        
+        #Eliminar ; al final de la instruccion
+        instruccionActual = instruccionActual.removesuffix(")")
+
+        #Separacion del nombre del metodo y sus parametros
+        nombreMetodo = instruccionActual.split("(")[0].strip()
+
+        #Parametros en el llamado al metodo. Se inicia con la particion entre parametros con comas
+        parametrosFragmentados = instruccionActual.split("(")[1].strip().split(",")
+
+        #Lista que tendra los parametros individuales
+        parametrosLinea = []
+            
+        #Ciclo para agregar los parametros individuales a su lista respectiva
+        for x in parametrosFragmentados:
+            parametrosLinea.append(x.strip())
+
+        #Dado que el metodo dos tiene un parametro opcional, toca ajustar el "nombre" para procesarlo correctamente
+        if nombreMetodo == "walk" and len(parametrosLinea) == 1:
+            nombreMetodo = "walk1"
+            
+        if nombreMetodo == "walk" and len(parametrosLinea) == 2:
+            nombreMetodo = "walk2"
+
+        #Si el nombre del metodo no esta en los metodos existentes, el programa es invalido
+        if not nombreMetodo in metodos:
+            return False
+
+        #Si el numero de parametros no es igual al numero esperado, el programa es invalido
+        if not metodos[nombreMetodo] == len(parametrosLinea):
+            return False
+            
+        #En este punto, se sabe que el metodo pertenece a los metodos existentes, asi que toca revisar que el numero/tipo de parametros es correcto
+        #Si la instruccion no es valida, el programa es invalido
+        if not validarInstruccion(nombreMetodo, parametrosLinea, parametrosProc):
+            return False
+    return rta
+#Funcion para procesar una instruccion while. El parametro parametrosProc esta en el caso que se llame a la funcion desde un bloque de instruccion de un PROC
 def validarWhile(linea, parametrosProc):
     rta = True
 
@@ -347,9 +410,6 @@ def validarWhile(linea, parametrosProc):
     return rta
 
 
-
-
-
 #Funcion para declarar un bloque de instrucciones de un metodo
 def procesarBloqueInstrucciones(archivo, parametros):
     rta = True
@@ -383,14 +443,36 @@ def procesarBloqueInstrucciones(archivo, parametros):
             continue
 
         #Revision si es un REPEAT
-        if lineaAct.startswith(CICLO_CERRADO) and lineaAct.startswith(FIN_CICLO_CERRADO):
+        if lineaAct.startswith(CICLO_CERRADO) and lineaAct.endswith(FIN_CICLO_CERRADO):
+            #Si bloque de instrucciones no cuenta con ambos parametros, o si estos no estan en orden el programa es invalido
+            if not lineaAct.find("{") > -1 and lineaAct.find("}") > -1 and lineaAct.find("{") > -1 < lineaAct.find("}"):
+                return False
+
+            #Separacion de todos los elementos
+            verificacion = lineaAct.split()
+
+            #El segundo elemento debe ser un digito, una variable o un parametro por proc
+            segundoValor = verificacion[1].strip()
+            seraDigito = segundoValor.isdigit()
+            esVariable = segundoValor in variablesExistentes
+            esParametro = segundoValor in parametros
+            #Si el segundo valor no cumple ninguna de estas condiciones el programa es invalido
+            if not seraDigito and esVariable and esParametro:
+                return False
+
+            #Separacion entre inicio estructura de control y bloque de instrucciones-fin estructura de control
+            seccionPorVerificar = lineaAct.split(segundoValor)[1].removesuffix(FIN_CICLO_CERRADO).strip()
+            
+            #Hacer la verificacion del fin de la estructura de control, si no es valido, el programa no es valido
+            if not validarFinEstructuraControl(seccionPorVerificar, parametros):
+                return False
+
             lineaAct = archivo.readline().strip()
             continue
         
         #Revision si es un condicional
         if lineaAct.startswith(INICIO_CONDICIONAL) and lineaAct.endswith(FIN_CONDICIONAL):
-
-
+            
             lineaAct = archivo.readline().strip()
             continue
         #Revision que sea una asignacion
@@ -668,8 +750,9 @@ def revisarArchivo(archivo):
             if not procesarBloqueInstrucciones(archivo, []):
                 return False
 
-
-    print(archivo.readline().strip())
+        #Si se llega a GORP, se deja de iterar el for
+        if lineaAct == FIN:
+            break
 
     return valido
 
