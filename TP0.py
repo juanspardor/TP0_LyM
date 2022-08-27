@@ -15,17 +15,23 @@ FIN_METODO = "CORP"
 CICLO_ABIERTO = "while"
 HACER = "do"
 DEJAR_HACER = "od"
-CICLO_CERRADO = "REPEAT"
+CICLO_CERRADO = "repeatTimes"
+FIN_CICLO_CERRADO = "per"
 NEGACION = "not"
 INICIO_CONDICIONAL = "if"
 FIN_CONDICIONAL = "fi"
+DE_LO_CONTRARIO = ""
 
 #Diccionario de metodos, donde la llave es el nombre y el valor es la cantidad de parametros que tiene
 metodos = { "walk1": 1, "jump": 1, "jumpTo": 2, "veer": 1, "look": 1, "drop": 1, "grab": 1, "get": 1, "free": 1, 
-            "pop": 1, "walk2": 2, "canWalk": 2, "canWalk": 2, "isFacing": 1, "isValid": 2, "canWalk": 2}
+            "pop": 1, "walk2": 2, "canWalk": 2, "isFacing": 1, "isValid": 2}
 
 #Lista de metodos que tienen como parametro una diraccion o sentido
 metodosDireccionales = ["veer", "look", "walk2"]
+
+#Lista de condicionales
+condicinales = ["canWalk", "isFacing", "isValid"]
+
 
 #Lista que guarda las direcciones y sentidos validos para algunos metodos
 parametrosVeer = ["left", "right", "around"]
@@ -94,21 +100,22 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
     rta = True
     
     #Primero se revisa si el metodo hace parte de los direccionales, ya que estos tienen mas restricciones en los parametros
-    if nombreMetodo in metodosDireccionales:
+    if nombreMetodo in metodosDireccionales or nombreMetodo in condicinales:
         
         #Se verifica si es veer
         if nombreMetodo == "veer":
             #Si el parametro no hace parte del conjunto de valores esperados, el programa es invalido
             if not parametrosLlamado[0] in parametrosVeer:
                 return False
-
+            return rta
 
         #Se verifica si es look
         if nombreMetodo == "look":
             #Si el parametro no hace parte del conjunto de valores esperados, el programa es invalido
             if not parametrosLlamado[0] in parametrosLook:
                 return False
-        
+            return rta
+
         #Se verifica si es walk
         if nombreMetodo == "walk2":
             #Si el primer parametro no hace parte del conjunto de valores esperados, el programa es invalido
@@ -123,18 +130,21 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
             #Si todos estos son falsos, el programa es invalido 
             if not(esDigito or esVariableYaDefinida or esParametroDeEntrada):
                 return False
+            return rta
 
         #Se verifica si es isValid
         if nombreMetodo == "isValid":
             #Si el parametro no hace parte de los valores esperados, el programa es invalido
             if not parametrosLlamado[0] in parametrosIsValid:
                 return False
-        
+            return rta
+
         #Se verifica si es isFacing
         if nombreMetodo == "isFacing":
             #Si el parametro no hace parte de los valores esperados, el programa es invalido
             if not parametrosLlamado[0] in parametrosLook:
                 return False
+            return rta
 
         #Se verifica si es canWalk
         if nombreMetodo == "canWalk":
@@ -150,6 +160,7 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
             #Si todos estos son falsos, el programa es invalido 
             if not(esDigito or esVariableYaDefinida or esParametroDeEntrada):
                 return False
+            return rta
 
     #Si no es uno de los metodos direccionales, es otro de los metodos predefinidos, que aceptan direcciones o sentidos 
     
@@ -163,6 +174,7 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
             #Si todos estos son falsos, el programa es invalido 
             if not(esDigito or esVariableYaDefinida or esParametroDeEntrada):
                 return False
+            return rta
 
     #El resto de metodos no-direccionales, solo tienen 1 parametro para revisar
     #Para dicho parametro toca revisar que sea un digito, o que sea un variable existente o un parametro que llega de la definicion de un PROC
@@ -175,6 +187,168 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
             return False
 
     return rta 
+
+#Funcion para procesar una instruccion while o if - else. El parametro parametrosProc esta en el caso que se llame a la funcion desde un bloque de instruccion de un PROC
+def validarWhile(linea, parametrosProc):
+    rta = True
+
+    #Posicion en la linea de do
+    posDo  = linea.find(HACER)
+
+    #Posicion inicio bloque
+    posInicio = linea.find("{")
+
+    #Posicion fin bloque 
+    posFin = linea.find("}")
+
+    #Si los brackets del bloque de instrucciones estan en un orden incorrecto el programa es invalido
+    if posInicio > posFin:
+        return False
+
+    #Se valida que el bloque de instrucciones este entre do y od. Es decir, '{' y '}' antes de od y despues de od
+    despuesDo = (posInicio > posDo) and (posFin > posDo)
+    if not despuesDo:
+        return False
+
+    #Se hace la division para revisar primero la condicion y posteriormente el bloque de instrucciones
+    divisionGrande = linea.split(HACER)
+
+    #Seccion de la condicion
+    seccionCondicion = divisionGrande[0].strip()
+
+    #Seccion del bloque de instrucciones 
+    seccionBloque = divisionGrande[1].strip()
+
+    #REVISION CONDICION-----------------
+    seccionCondicion = seccionCondicion.removeprefix(CICLO_ABIERTO).strip()
+
+    #Si la condicion no esta entre parentesis o hay algun tipo de texto diferente, el programa es invalido
+    if not seccionCondicion.startswith("(") and seccionCondicion.endswith(")"):
+        return False
+
+    #Se elimina el primer y ultimo parentesis
+    seccionCondicion = seccionCondicion.removeprefix("(").strip()
+    seccionCondicion = seccionCondicion.removesuffix(")").strip()
+
+    #Se revisa si hay un not
+    if seccionCondicion.lower().startswith(NEGACION):
+        #Si no esta escrito exactamente 'not' el programa es invalido
+        if not seccionCondicion.startswith(NEGACION):
+            return False
+
+        #Si hay un not se elemina
+        seccionCondicion = seccionCondicion.removeprefix(NEGACION).strip()
+        
+        #Si no se inicia y termina la condicion con parentesis o hay algo disntinto, el programa es invalido
+        if not seccionCondicion.startswith("(") and seccionCondicion.endswith(")"):
+            return False
+
+        #Se elimina el primer y ultimo parentesis
+        seccionCondicion = seccionCondicion.removeprefix("(").strip()
+        seccionCondicion = seccionCondicion.removesuffix(")").strip()
+
+    #Una vez procesada la posible existencia de un not, se verifica la condicion en si
+    #Si la condicion no termina en parentesis, el programa es invalido
+    if not seccionCondicion.endswith(")"):
+        return False
+    
+    #Si la condicion no tiene (, el programa es invalido
+    if not seccionCondicion.find("(") > -1:
+        return False
+
+    #Separacion del nombre de la condicion y sus parametros
+    nombreCondicion = seccionCondicion.split("(")[0].strip()
+
+    #Parametros en el llamado a la condicion. Se inicia con la particion entre parametros con comas
+    parametrosFragmentados = seccionCondicion.split("(")[1].removesuffix(")").strip().split(",")
+
+    #Lista que tendra los parametros individuales
+    parametrosLinea = []
+            
+    #Ciclo para agregar los parametros individuales a su lista respectiva
+    for x in parametrosFragmentados:
+        parametrosLinea.append(x.strip())
+    
+    #Si la condicion no esta en la lista de condiciones, el programa es invalido
+    if not nombreCondicion in condicinales:
+        return False
+    
+    #Si el numero de parametros de la condicion no es igual al determinado, el programa es invalido
+    if not metodos[nombreCondicion] == len(parametrosLinea):
+        return False
+
+    #Si la condicion en si no es valida, el programa no es valido
+    if not validarInstruccion(nombreCondicion, parametrosLinea, parametrosProc):
+        return False
+    
+    #REVISION BLOQUE    -----------------
+    #Eliminar od para quedar con el bloque unicamente
+    seccionBloque = seccionBloque.removesuffix("od").strip()
+
+    #Si el bloque no inicia y termina con { }, el programa es invalido
+    if not seccionBloque.startswith("{") and seccionBloque.endswith("}"):
+        return False
+
+    #Eliminacion de brackets
+    seccionBloque = seccionBloque.removeprefix("{").strip()
+    seccionBloque = seccionBloque.removesuffix("}").strip()
+
+    #Si la ultima instruccion del bloque no termina en ;, el programa es invalido
+    if not seccionBloque.endswith(";"):
+        return False
+    
+    #Se hace la separacion de instrucciones en el caso que haya mas de una
+    instrucciones = seccionBloque.split(";")
+    instrucciones.pop()
+    #Revision individual de cada instruccion
+    for instruccionActual in instrucciones:
+        
+        instruccionActual = instruccionActual.strip()
+        #Si la instruccion no tiene ( y termina en ), el programa es invalido
+        if not instruccionActual.find("(") > -1 and instruccionActual.endswith(")"):
+            return False
+        
+        #Eliminar ; al final de la instruccion
+        instruccionActual = instruccionActual.removesuffix(")")
+
+        #Separacion del nombre del metodo y sus parametros
+        nombreMetodo = instruccionActual.split("(")[0].strip()
+
+        #Parametros en el llamado al metodo. Se inicia con la particion entre parametros con comas
+        parametrosFragmentados = instruccionActual.split("(")[1].strip().split(",")
+
+        #Lista que tendra los parametros individuales
+        parametrosLinea = []
+            
+        #Ciclo para agregar los parametros individuales a su lista respectiva
+        for x in parametrosFragmentados:
+            parametrosLinea.append(x.strip())
+
+        #Dado que el metodo dos tiene un parametro opcional, toca ajustar el "nombre" para procesarlo correctamente
+        if nombreMetodo == "walk" and len(parametrosLinea) == 1:
+            nombreMetodo = "walk1"
+            
+        if nombreMetodo == "walk" and len(parametrosLinea) == 2:
+            nombreMetodo = "walk2"
+
+        #Si el nombre del metodo no esta en los metodos existentes, el programa es invalido
+        if not nombreMetodo in metodos:
+            return False
+
+        #Si el numero de parametros no es igual al numero esperado, el programa es invalido
+        if not metodos[nombreMetodo] == len(parametrosLinea):
+            return False
+            
+        #En este punto, se sabe que el metodo pertenece a los metodos existentes, asi que toca revisar que el numero/tipo de parametros es correcto
+        #Si la instruccion no es valida, el programa es invalido
+        if not validarInstruccion(nombreMetodo, parametrosLinea, parametrosProc):
+            return False
+
+    return rta
+
+
+
+
 
 #Funcion para declarar un bloque de instrucciones de un metodo
 def procesarBloqueInstrucciones(archivo, parametros):
@@ -193,17 +367,30 @@ def procesarBloqueInstrucciones(archivo, parametros):
             continue
 
         #Revision si es un WHILE
-        if lineaAct.startswith(CICLO_ABIERTO):
+        if lineaAct.startswith(CICLO_ABIERTO) and lineaAct.endswith(DEJAR_HACER):
+            #Si no se cuenta con do y od, el programa no es valido
+            if not lineaAct.find(HACER) > -1 and lineaAct.find(DEJAR_HACER) > -1:
+                return False
+
+            #Si no se cuenta con los brackets del bloque de isntrucciones, el programa no es valido
+            if not lineaAct.find("{") > -1 and lineaAct.find("}") > -1:
+                return False
+
+            if not validarWhile(lineaAct, parametros):
+                return False
+
             lineaAct = archivo.readline().strip()
             continue
 
         #Revision si es un REPEAT
-        if lineaAct.startswith(CICLO_CERRADO):
+        if lineaAct.startswith(CICLO_CERRADO) and lineaAct.startswith(FIN_CICLO_CERRADO):
             lineaAct = archivo.readline().strip()
             continue
         
         #Revision si es un condicional
         if lineaAct.startswith(INICIO_CONDICIONAL) and lineaAct.endswith(FIN_CONDICIONAL):
+
+
             lineaAct = archivo.readline().strip()
             continue
         #Revision que sea una asignacion
@@ -246,8 +433,11 @@ def procesarBloqueInstrucciones(archivo, parametros):
             return False
         
         #Si tiene dos parentesis, es un llamado a un metodo, por lo que se valida
-        if (lineaAct.count("(")== 1 and lineaAct.count(")") == 1):
+        if (lineaAct.count("(")== 1 and lineaAct.endswith(");") == 1):
 
+            #Si la posicion de los parentesis es incorrecta, el programa es invalido
+            if lineaAct.find("(") > lineaAct.find(")"):
+                return False
             #Eliminar ; al final de la instruccion
             lineaAct = lineaAct.removesuffix(");")
 
