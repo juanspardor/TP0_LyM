@@ -20,7 +20,7 @@ FIN_CICLO_CERRADO = "per"
 NEGACION = "not"
 INICIO_CONDICIONAL = "if"
 FIN_CONDICIONAL = "fi"
-DE_LO_CONTRARIO = ""
+DE_LO_CONTRARIO = "else"
 
 #Diccionario de metodos, donde la llave es el nombre y el valor es la cantidad de parametros que tiene
 metodos = { "walk1": 1, "jump": 1, "jumpTo": 2, "veer": 1, "look": 1, "drop": 1, "grab": 1, "get": 1, "free": 1, 
@@ -56,11 +56,6 @@ cantidadCorp = 0
 
 #Variable que guarda la lectura completa del archivo
 inicioFinCorrecto = ""
-
-#Cuando se haga el llamado a un metodo se revisa que exista la llave y que el numero de parametros agregados sea igual el valor que esta en el dict
-
-#Cuando inicia un metodo, asegurarse que la siguiente linea sea '{'. D.l.c valido = false.
-#Quizas tener un booleano que inidique si se abrieron los parentesis de un metodo, pero no estoy seguro de como hacer que no se putee si nunca se cierre
 
 
 #Funcion para procesar una linea que inica con VAR
@@ -99,6 +94,8 @@ def procesarVariables(linea):
 def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
     rta = True
     
+    if metodos[nombreMetodo] == 0:
+        return rta
     #Primero se revisa si el metodo hace parte de los direccionales, ya que estos tienen mas restricciones en los parametros
     if nombreMetodo in metodosDireccionales or nombreMetodo in condicinales:
         
@@ -188,8 +185,8 @@ def validarInstruccion(nombreMetodo, parametrosLlamado, parametrosProc):
 
     return rta 
 
-#Fucion para procesar el fin de la estructura repeatTimes
-def validarFinEstructuraControl(linea, parametrosProc):
+#Fucion para procesar el fin de la estructura repeatTimes a partir de su linea y parametros de un metodo si viene de un PROC
+def validarBloqueEstructurasControl(linea, parametrosProc):
     rta = True
 
     #Si la linea no es un bloque de instrucciones, el programa es invalido
@@ -251,6 +248,71 @@ def validarFinEstructuraControl(linea, parametrosProc):
         if not validarInstruccion(nombreMetodo, parametrosLinea, parametrosProc):
             return False
     return rta
+
+#Funcion para validar una condicion en una estructura de control teniendo en cuenta unos parametros si viene desde un PROC
+def validarCondicion(seccionCondicion, parametrosProc):
+    rta = True
+    #Si la condicion no esta entre parentesis o hay algun tipo de texto diferente, el programa es invalido
+    if not seccionCondicion.startswith("(") and seccionCondicion.endswith(")"):
+        return False
+
+    #Se elimina el primer y ultimo parentesis
+    seccionCondicion = seccionCondicion.removeprefix("(").strip()
+    seccionCondicion = seccionCondicion.removesuffix(")").strip()
+
+    #Se revisa si hay un not
+    if seccionCondicion.lower().startswith(NEGACION):
+        #Si no esta escrito exactamente 'not' el programa es invalido
+        if not seccionCondicion.startswith(NEGACION):
+            return False
+
+        #Si hay un not se elemina
+        seccionCondicion = seccionCondicion.removeprefix(NEGACION).strip()
+        
+        #Si no se inicia y termina la condicion con parentesis o hay algo disntinto, el programa es invalido
+        if not seccionCondicion.startswith("(") and seccionCondicion.endswith(")"):
+            return False
+
+        #Se elimina el primer y ultimo parentesis
+        seccionCondicion = seccionCondicion.removeprefix("(").strip()
+        seccionCondicion = seccionCondicion.removesuffix(")").strip()
+
+    #Una vez procesada la posible existencia de un not, se verifica la condicion en si
+    #Si la condicion no termina en parentesis, el programa es invalido
+    if not seccionCondicion.endswith(")"):
+        return False
+    
+    #Si la condicion no tiene (, el programa es invalido
+    if not seccionCondicion.find("(") > -1:
+        return False
+
+    #Separacion del nombre de la condicion y sus parametros
+    nombreCondicion = seccionCondicion.split("(")[0].strip()
+
+    #Parametros en el llamado a la condicion. Se inicia con la particion entre parametros con comas
+    parametrosFragmentados = seccionCondicion.split("(")[1].removesuffix(")").strip().split(",")
+
+    #Lista que tendra los parametros individuales
+    parametrosLinea = []
+            
+    #Ciclo para agregar los parametros individuales a su lista respectiva
+    for x in parametrosFragmentados:
+        parametrosLinea.append(x.strip())
+    
+    #Si la condicion no esta en la lista de condiciones, el programa es invalido
+    if not nombreCondicion in condicinales:
+        return False
+    
+    #Si el numero de parametros de la condicion no es igual al determinado, el programa es invalido
+    if not metodos[nombreCondicion] == len(parametrosLinea):
+        return False
+
+    #Si la condicion en si no es valida, el programa no es valido
+    if not validarInstruccion(nombreCondicion, parametrosLinea, parametrosProc):
+        return False
+    return rta
+
+
 #Funcion para procesar una instruccion while. El parametro parametrosProc esta en el caso que se llame a la funcion desde un bloque de instruccion de un PROC
 def validarWhile(linea, parametrosProc):
     rta = True
@@ -419,10 +481,10 @@ def procesarBloqueInstrucciones(archivo, parametros):
 
     #Se revisa cada una de las lineas dentro del bloque de instrucciones
     while (lineaAct == "}") == False:
-        print(lineaAct)
-        print("Estoy aca")
         #Si la linea actual es "", se continua iterando
         if lineaAct == "":
+
+            #Iterar
             lineaAct = archivo.readline().strip()
             continue
 
@@ -439,6 +501,7 @@ def procesarBloqueInstrucciones(archivo, parametros):
             if not validarWhile(lineaAct, parametros):
                 return False
 
+            #Iterar
             lineaAct = archivo.readline().strip()
             continue
 
@@ -464,17 +527,106 @@ def procesarBloqueInstrucciones(archivo, parametros):
             seccionPorVerificar = lineaAct.split(segundoValor)[1].removesuffix(FIN_CICLO_CERRADO).strip()
             
             #Hacer la verificacion del fin de la estructura de control, si no es valido, el programa no es valido
-            if not validarFinEstructuraControl(seccionPorVerificar, parametros):
+            if not validarBloqueEstructurasControl(seccionPorVerificar, parametros):
                 return False
 
+            #Iterar
             lineaAct = archivo.readline().strip()
             continue
         
         #Revision si es un condicional
         if lineaAct.startswith(INICIO_CONDICIONAL) and lineaAct.endswith(FIN_CONDICIONAL):
             
+            #Revision si el condicional incluye un else
+            if lineaAct.lower().find(DE_LO_CONTRARIO) >- 1:
+                #El else debe estar escrito correctamente
+                if not lineaAct.find(DE_LO_CONTRARIO):
+                    return False
+
+                #Verificacion con else
+                #Eliminar palabras resevardas al final y principio
+                lineaAct = lineaAct.removeprefix(INICIO_CONDICIONAL).strip()
+                lineaAct = lineaAct.removesuffix(FIN_CONDICIONAL).strip() 
+
+                #Se separa por el else
+                partesElse = lineaAct.split(DE_LO_CONTRARIO)
+                
+                #Parte antes del else
+                parteAntesElse = partesElse[0].strip()
+
+                #Parte despues del else
+                parteDespuesElse = partesElse[1].strip()
+
+                #VERIFICACION ANTES ELSE -----
+                #Verificar que se inicie por el inicio de una condicion y termine con el fin de un bloque de instrucciones
+                if not parteAntesElse.startswith("(") and parteAntesElse.endswith("}"):
+                    return False
+                
+                #Verificar que haya almenos un ( y un {
+                if not parteAntesElse.find(")") >- 1 and parteAntesElse.find("{") > -1:
+                    return False 
+                
+                #Si el primero ) esta antes del inicio de bloque de instrucciones, el programa es invalido
+                if parteAntesElse.find(")") > parteAntesElse.find("{"):
+                    return False
+
+                #Separar entre condicion y bloque de instruccion
+                condicion = parteAntesElse.split("{")[0].strip()
+                seccionBloque = "{"+ parteAntesElse.split("{")[1].strip()
+
+                #Si la seccion de bloque de instrucciones no es valida, el programa no es valido
+                if not validarBloqueEstructurasControl(seccionBloque, parametros):
+                    return False
+
+                #Si la seccion de condicion no es valida, el programa no es valido
+                if not validarCondicion(condicion, parametros):
+                    return False
+                
+
+                #VERIFICACION DESPUES ELSE ----
+                #Si el bloque no es valido, el programa tampoco
+                if not validarBloqueEstructurasControl(parteDespuesElse, parametros):
+                    return False
+
+                #Iterar
+                lineaAct = archivo.readline().strip()
+                continue
+
+            
+            #Verificacion sin else en la estructura de control
+
+            #Eliminar palabras resevardas al final y principio
+            lineaAct = lineaAct.removeprefix(INICIO_CONDICIONAL).strip()
+            lineaAct = lineaAct.removesuffix(FIN_CONDICIONAL).strip() 
+
+            #Verificar que se inicie por el inicio de una condicion y termine con el fin de un bloque de instrucciones
+            if not lineaAct.startswith("(") and lineaAct.endswith("}"):
+                return False
+
+            #Verificar que haya al menos un ) y un {   
+            if not lineaAct.find(")") >- 1 and lineaAct.find("{") > -1:
+                return False
+            
+            #Si el primero ) esta antes del inicio de bloque de instrucciones, el programa es invalido
+            if lineaAct.find(")") > lineaAct.find("{"):
+                return False
+
+            #Separar entre condicion y bloque de instruccion
+            condicion = lineaAct.split("{")[0].strip()
+            seccionBloque = "{"+ lineaAct.split("{")[1].strip()
+
+            #Si la seccion de bloque de instrucciones no es valida, el programa no es valido
+            if not validarBloqueEstructurasControl(seccionBloque, parametros):
+                return False
+
+            #Si la seccion de condicion no es valida, el programa no es valido
+            if not validarCondicion(condicion, parametros):
+                return False
+
+            #Iterar
             lineaAct = archivo.readline().strip()
             continue
+
         #Revision que sea una asignacion
         if lineaAct.find(":=") > - 1:
 
@@ -495,6 +647,8 @@ def procesarBloqueInstrucciones(archivo, parametros):
 
             #Si la asignacion es a una de las variables que entra por parametro no pasa nada
             if variable in parametros:
+                
+                #Iterar
                 lineaAct = archivo.readline().strip()
                 continue
             
@@ -516,7 +670,8 @@ def procesarBloqueInstrucciones(archivo, parametros):
         
         #Si tiene dos parentesis, es un llamado a un metodo, por lo que se valida
         if (lineaAct.count("(")== 1 and lineaAct.endswith(");") == 1):
-
+            #Linea original para determinar si tiene o no parametros
+            lineaOriginal = lineaAct
             #Si la posicion de los parentesis es incorrecta, el programa es invalido
             if lineaAct.find("(") > lineaAct.find(")"):
                 return False
@@ -547,8 +702,15 @@ def procesarBloqueInstrucciones(archivo, parametros):
             if not nombreMetodo in metodos:
                 return False
 
+            #Cantidad de parametros
+            cantidadParametros = len(parametrosLinea)
+
+            #Si no hay parametros parametrosLinea = [''], pero eso tiene len = 1, entonces se revisa la linea original para evitar ese problema
+            if lineaOriginal.endswith("();"):
+                cantidadParametros = 0
+                
             #Si el numero de parametros no es igual al numero esperado, el programa es invalido
-            if not metodos[nombreMetodo] == len(parametrosLinea):
+            if not metodos[nombreMetodo] == cantidadParametros:
                 return False
             
             #En este punto, se sabe que el metodo pertenece a los metodos existentes, asi que toca revisar que el numero/tipo de parametros es correcto
@@ -559,13 +721,16 @@ def procesarBloqueInstrucciones(archivo, parametros):
             #Si la instruccion es valida, se continua iterando
             lineaAct = archivo.readline().strip()
             continue   
+
         #Si se llego hasta este punto, la linea dentro del bloque de instrucciones no pertenece a la sintaxis del programa, y este es invalido
         return False
+
     return rta
 
 #Funcion para procesar la declaracion de un PROC
 def procesarPROC(programa, linea):
     rta = True
+
     #Si la declaracion no inicia con PROC, el programa es invalido
     if linea.startswith(METODO) == False:
         return False
@@ -597,8 +762,14 @@ def procesarPROC(programa, linea):
     for x in parametrosSinLimpiar:
         parametros.append(x.removesuffix(')').strip())
 
+    cantidadParametros = len(parametros)
+
+    #Si el metodo no tiene parametros, la cantidad de parametros es 0
+    if metodoCompleto.endswith("()"):
+        cantidadParametros = 0
+
     #Se agrega el metodo al diccionario de metodos, junto a su cantidad de parametros respectiva
-    metodos[nombreMetodo] = len(parametros)
+    metodos[nombreMetodo] = cantidadParametros
 
     #Variable para guardar la linea actual
     lineaAct = ""
@@ -620,12 +791,13 @@ def procesarPROC(programa, linea):
     #Actualizar la linea actual
     lineaAct = programa.readline().strip()
 
+    
     #Al ser el bloque de instrucciones valido, se busca CORP para terminar de revisar el metodo. 
     while (lineaAct == FIN_METODO) == False:
         #Si alguna linea en el medio es distitna a "", el programa es invalido
         if not lineaAct == "":
             return False
-        
+            
         #Se actualiza la linea actual
         lineaAct = programa.readline().strip()
     
@@ -671,7 +843,6 @@ def revisarArchivo(archivo):
 
     #Numero de lineas a leer
     numero = len(archivo.readlines())
-    print(str(numero))
 
     #Lectura del archhivo completo
     archivo.seek(0)
@@ -689,19 +860,15 @@ def revisarArchivo(archivo):
         valido = False
         return valido
 
-    #Verificar que todos los PROC tengan su CORP respectivo. ACA TOCA DEVOLVER EL NOT
+    #Verificar que todos los PROC tengan su CORP respectivo. 
     totalCorp = inicioFinCorrecto.count(FIN_METODO)
     totalProc = inicioFinCorrecto.count(METODO)
     if  not totalCorp == totalProc:
         valido = False
         return valido
     
-
-    
     #Volver a iniciar la lectura del archivo
     archivo.seek(0)
-    #Lectura primera linea que ya se reviso
-    print(archivo.readline().strip())
 
     #Inicio revision del archivo completo
     for i in range(1, numero-1):
@@ -750,6 +917,9 @@ def revisarArchivo(archivo):
             if not procesarBloqueInstrucciones(archivo, []):
                 return False
 
+        #Si la linea actual es un CORP el programa es invalido, ya que estos se deberian leer con un PROC. Es decir, es un CORP si su PROC respectico
+        if lineaAct == FIN_METODO:
+            return False
         #Si se llega a GORP, se deja de iterar el for
         if lineaAct == FIN:
             break

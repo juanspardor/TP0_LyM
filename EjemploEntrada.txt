@@ -5,33 +5,37 @@ PROC putCB(c, b)
     n:=4;
     putCB(c,b);
     walk(right, n);
+    jumpTo(2,3);
+    drop(12);
+    grab(2);
+    get(1);
+    free(c);
+    pop(n);
 }
 CORP
 PROC goNorth ()
 {
 
-    while (canWalk(north, 1)) do { walk(north, 1);walk(south, 2); } od
-
+    while (isFacing(north)) do { walk(north, 1);walk(south, 2); } od
+    if (isValid(jump, 2)) { veer(left);jump(y);} else {look(south);} fi
 }
 CORP
 PROC goWest()
 {
     repeatTimes 2 {canWalk(left, 1);canWalk(left, 1);} per
-    if (canWalk(west,1)) { walk(west,1)} fi
+    if (not (canWalk(west,1))) { walk(west,1);} fi
 
 }
 CORP
 
 
 {
-go(3,3);
-n=6;
-putCB(x,1)
+
+n:=6;
+putCB(x,1);
 
 
 
 }
 
 GORP
-
-
